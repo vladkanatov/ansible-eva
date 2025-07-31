@@ -1,0 +1,17 @@
+---
+- name: Update core platform
+  hosts: core_cluster
+  gather_facts: true
+  become: true
+
+  vars:
+    version: "{{ lookup('env', 'VERSION') }}"  # Версия берется из переменной окружения
+
+  pre_tasks:
+    - name: Validate version variable
+      ansible.builtin.fail:
+        msg: "Version must be specified. Use -e 'version=x.x.x' or set VERSION environment variable"
+      when: version is not defined or version == ""
+
+  roles:
+    - core_update

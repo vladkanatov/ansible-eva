@@ -1,0 +1,4 @@
+---
+core_update_service_name: "core"
+core_update_base_dir: "/opt/outss/core"
+core_update_package: "trs.outss"
