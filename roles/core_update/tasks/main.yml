@@ -2,13 +2,13 @@
 - name: Stop service on all nodes
   become: true
   ansible.builtin.systemd:
-    name: "{{ service_name }}"
+    name: "{{ core_update_service_name }}"
     state: stopped
 
 - name: Get currently installed package version
   become: true
   ansible.builtin.command: >
-    ls {{ base_dir }}/Packages | grep "{{ package_name }}-" | awk -F'-' '{print $2}'
+    ls {{ core_update_base_dir }}/Packages | grep "{{ core_update_package }}-" | awk -F'-' '{print $2}'
   register: installed_version
   changed_when: false
   ignore_errors: true
@@ -22,8 +22,8 @@
 - name: Update package if versions differ
   become: true
   ansible.builtin.command:
-    cmd: "{{ base_dir }}/Launcher.dll pkg -s http://main.eacs.transset.ru update {{ package_name }} {{ version }}"
-    creates: "{{ base_dir }}/Packages/{{ package_name }}-{{ version }}"
+    cmd: "{{ core_update_base_dir }}/Launcher.dll pkg -s http://main.eacs.transset.ru update {{ core_update_package }} {{ version }}"
+    creates: "{{ core_update_base_dir }}/Packages/{{ core_update_package }}-{{ version }}"
   when:
     - inventory_hostname == groups['core_cluster'][0]
     - installed_version.stdout != version
@@ -31,19 +31,17 @@
 - name: Remove Packages directory on non-first nodes
   become: true
   ansible.builtin.file:
-    path: "{{ base_dir }}/Packages"
+    path: "{{ core_update_base_dir }}/Packages"
     state: absent
   when: inventory_hostname != groups['core_cluster'][0]
 
 - name: Copy Packages directory from first node to others
   become: true
-  community.general.rsync:
-    src: "{{ base_dir }}/Packages/"
-    dest: "{{ base_dir }}/Packages"
-    mode: pull
-    delete: true
-    archive: true
-    compress: true
+  ansible.builtin.copy:
+    src: "{{ core_update_base_dir }}/Packages/"
+    dest: "{{ core_update_base_dir }}/Packages"
+    remote_src: true
+    mode: preserve
   delegate_to: "{{ groups['core_cluster'][0] }}"
   when: inventory_hostname != groups['core_cluster'][0]
 
@@ -56,5 +54,5 @@
 - name: Restart service on all nodes
   become: true
   ansible.builtin.systemd:
-    name: "{{ service_name }}"
+    name: "{{ core_update_service_name }}"
     state: restarted
