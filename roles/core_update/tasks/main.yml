@@ -5,19 +5,34 @@
     name: "{{ core_update_service_name }}"
     state: stopped
 
-- name: Get currently installed package version
+# Поиск пакета только на первом ноде
+- name: Find installed package
   become: true
-  ansible.builtin.shell: >
-    ls {{ core_update_base_dir }}/Packages | grep "{{ core_update_package }}-" | awk -F'-' '{print $2}'
-  register: installed_version
-  changed_when: false
-  ignore_errors: true
+  ansible.builtin.find:
+    paths: "{{ core_update_base_dir }}/Packages"
+    patterns: "{{ core_update_package }}-*"
+    file_type: file
+  register: core_update_found_packages
   when: inventory_hostname == groups['core_cluster'][0]
+  tags:
+    - out_packages
+
+# Извлекаем версию (если пакет найден)
+- name: Extract installed version
+  ansible.builtin.set_fact:
+    core_update_installed_version: "{{ core_update_found_packages.files[0].path | basename | regex_replace('^' ~ core_update_package ~ '-', '') }}"
+  when:
+    - inventory_hostname == groups['core_cluster'][0]
+    - core_update_found_packages.matched > 0
+  tags:
+    - out_packages
 
 - name: Debug installed version
   ansible.builtin.debug:
-    var: installed_version.stdout
+    var: core_update_installed_version
   when: inventory_hostname == groups['core_cluster'][0]
+  tags:
+    - out_packages
 
 - name: Update package if versions differ
   become: true
@@ -26,7 +41,7 @@
     creates: "{{ core_update_base_dir }}/Packages/{{ core_update_package }}-{{ version }}"
   when:
     - inventory_hostname == groups['core_cluster'][0]
-    - installed_version.stdout != version
+    - core_update_installed_version.stdout != version
 
 - name: Remove Packages directory on non-first nodes
   become: true
