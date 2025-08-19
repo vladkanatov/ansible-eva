@@ -7,7 +7,7 @@
 
 - name: Get currently installed package version
   become: true
-  ansible.builtin.command: >
+  ansible.builtin.shell: >
     ls {{ core_update_base_dir }}/Packages | grep "{{ core_update_package }}-" | awk -F'-' '{print $2}'
   register: installed_version
   changed_when: false
