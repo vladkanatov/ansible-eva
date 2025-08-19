@@ -11,7 +11,7 @@
   ansible.builtin.find:
     paths: "{{ core_update_base_dir }}/Packages"
     patterns: "{{ core_update_package }}-*"
-    file_type: file
+    file_type: any
   register: core_update_found_packages
   run_once: true
   tags:
