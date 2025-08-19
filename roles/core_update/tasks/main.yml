@@ -5,7 +5,7 @@
     name: "{{ core_update_service_name }}"
     state: stopped
 
-# Поиск пакета только на первом ноде
+# Находим пакет только на первом хосте
 - name: Find installed package
   become: true
   ansible.builtin.find:
@@ -13,35 +13,51 @@
     patterns: "{{ core_update_package }}-*"
     file_type: file
   register: core_update_found_packages
-  when: inventory_hostname == groups['core_cluster'][0]
+  run_once: true
   tags:
     - out_packages
 
-# Извлекаем версию (если пакет найден)
+# Извлекаем версию, если пакет найден
 - name: Extract installed version
   ansible.builtin.set_fact:
-    core_update_installed_version: "{{ core_update_found_packages.files[0].path | basename | regex_replace('^' ~ core_update_package ~ '-', '') }}"
-  when:
-    - inventory_hostname == groups['core_cluster'][0]
-    - core_update_found_packages.matched > 0
+    core_update_installed_version: >-
+      {{ core_update_found_packages.files[0].path
+         | basename
+         | regex_replace('^' ~ core_update_package ~ '-', '') }}
+  when: core_update_found_packages.matched | default(0) | int > 0
+  run_once: true
   tags:
     - out_packages
 
+# Если пакета нет – версия пустая
+- name: Set empty version if not found
+  ansible.builtin.set_fact:
+    core_update_installed_version: ""
+  when: core_update_found_packages.matched | default(0) | int == 0
+  run_once: true
+  tags:
+    - out_packages
+
+# Отладка
 - name: Debug installed version
   ansible.builtin.debug:
-    msg: "Installed version is: {{ core_update_installed_version }}"
-  when: inventory_hostname == groups['core_cluster'][0]
+    msg: "Installed version is: {{ core_update_installed_version | default('NONE') }}"
+  run_once: true
   tags:
     - out_packages
 
+# Обновление пакета (только на первом ноде)
 - name: Update package if versions differ
   become: true
   ansible.builtin.command:
-    cmd: "dotnet {{ core_update_base_dir }}/Launcher.dll pkg -s http://main.eacs.transset.ru update {{ core_update_package }} {{ version }}"
+    cmd: >
+      dotnet {{ core_update_base_dir }}/Launcher.dll pkg
+      -s http://main.eacs.transset.ru
+      update {{ core_update_package }} {{ version }}
     creates: "{{ core_update_base_dir }}/Packages/{{ core_update_package }}-{{ version }}"
   when:
     - inventory_hostname == groups['core_cluster'][0]
-    - core_update_installed_version.stdout != version
+    - core_update_installed_version | default('') != version
 
 - name: Remove Packages directory on non-first nodes
   become: true
