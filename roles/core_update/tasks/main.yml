@@ -29,7 +29,7 @@
 
 - name: Debug installed version
   ansible.builtin.debug:
-    var: core_update_installed_version
+    msg: "Installed version is: {{ core_update_installed_version }}"
   when: inventory_hostname == groups['core_cluster'][0]
   tags:
     - out_packages
