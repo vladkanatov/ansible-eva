@@ -22,7 +22,7 @@
 - name: Update package if versions differ
   become: true
   ansible.builtin.command:
-    cmd: "{{ core_update_base_dir }}/Launcher.dll pkg -s http://main.eacs.transset.ru update {{ core_update_package }} {{ version }}"
+    cmd: "dotnet {{ core_update_base_dir }}/Launcher.dll pkg -s http://main.eacs.transset.ru update {{ core_update_package }} {{ version }}"
     creates: "{{ core_update_base_dir }}/Packages/{{ core_update_package }}-{{ version }}"
   when:
     - inventory_hostname == groups['core_cluster'][0]
