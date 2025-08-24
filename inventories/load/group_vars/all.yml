@@ -1,0 +1,4 @@
+---
+service_name: "eva-core"
+base_dir: "/opt/eva/core"
+package_name: "trs.outss"
