@@ -4,6 +4,8 @@
   ansible.builtin.systemd:
     name: "{{ core_update_service_name }}"
     state: stopped
+  tags:
+    - restart
 
 # Находим пакет только на первом хосте
 - name: Find installed package
@@ -87,3 +89,5 @@
   ansible.builtin.systemd:
     name: "{{ core_update_service_name }}"
     state: restarted
+  tags:
+    - restart
