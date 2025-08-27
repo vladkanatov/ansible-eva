@@ -61,22 +61,6 @@
     - inventory_hostname == groups['core_cluster'][0]
     - core_update_installed_version | default('') != version
 
-- name: Create temporary directory on controller
-  ansible.builtin.tempfile:
-    state: directory
-    suffix: packages_sync
-  delegate_to: localhost
-  register: core_update_temp_packages_dir
-  run_once: true
-
-- name: Fetch Packages directory from first node to controller
-  become: true
-  ansible.builtin.fetch:
-    src: "{{ core_update_base_dir }}/Packages/"
-    dest: "{{ core_update_temp_packages_dir.path }}/"
-    flat: false
-  when: inventory_hostname == groups['core_cluster'][0]
-
 - name: Remove Packages directory on non-first nodes
   become: true
   ansible.builtin.file:
@@ -84,20 +68,21 @@
     state: absent
   when: inventory_hostname != groups['core_cluster'][0]
 
-- name: Copy Packages directory from controller to non-first nodes
+- name: Copy Packages directory from first node to others
   become: true
   ansible.builtin.copy:
-    src: "{{ core_update_temp_packages_dir.path }}/{{ groups['core_cluster'][0] }}{{ core_update_base_dir }}/Packages/"
+    src: "{{ core_update_base_dir }}/Packages/"
     dest: "{{ core_update_base_dir }}/Packages"
+    remote_src: true
     mode: preserve
+  delegate_to: "{{ groups['core_cluster'][0] }}"
   when: inventory_hostname != groups['core_cluster'][0]
 
-- name: Clean up temporary directory on controller
-  ansible.builtin.file:
-    path: "{{ core_update_temp_packages_dir.path }}"
-    state: absent
-  delegate_to: localhost
-  run_once: true
+- name: Verify rsync is installed
+  become: true
+  ansible.builtin.package:
+    name: rsync
+    state: present
 
 - name: Restart service on all nodes
   become: true
