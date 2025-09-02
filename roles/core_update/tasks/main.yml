@@ -68,15 +68,15 @@
     state: absent
   when: inventory_hostname != groups['core_cluster'][0]
 
-- name: Copy Packages directory from first node to others
+- name: Copy Packages directory using synchronize
   become: true
-  ansible.builtin.copy:
+  ansible.posix.synchronize:
     src: "{{ core_update_base_dir }}/Packages/"
     dest: "{{ core_update_base_dir }}/Packages"
-    remote_src: true
-    mode: preserve
+    mode: push
+    delete: true
+    recursive: true
   delegate_to: "{{ groups['core_cluster'][0] }}"
-  when: inventory_hostname != groups['core_cluster'][0]
 
 - name: Verify rsync is installed
   become: true
