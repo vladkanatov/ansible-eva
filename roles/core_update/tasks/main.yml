@@ -49,7 +49,7 @@
     - out_packages
 
 # Обновление пакета (только на первом ноде)
-- name: Update package if versions differ
+- name: Update package if version is less than or equal to target
   become: true
   ansible.builtin.command:
     cmd: >
@@ -59,7 +59,7 @@
     creates: "{{ core_update_base_dir }}/Packages/{{ core_update_package }}-{{ version }}"
   when:
     - inventory_hostname == groups['core_cluster'][0]
-    - core_update_installed_version | default('') != version
+    - core_update_installed_version | default('') is version(version, '<=', strict=false)
 
 - name: Remove Packages directory on non-first nodes
   become: true
